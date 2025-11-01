@@ -21,6 +21,7 @@ share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+PIPFILE.lock
 
 # Virtual Environment
 venv/
@@ -40,15 +41,24 @@ traffic.db
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
-Thumbs.db
 
 # Logs
 *.log
+logs/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Packet captures
+*.pcap
+*.pcapng
 
 # Exports
-export_*.json
-*.pcap
-*.cap
+exports/
+*.json
+
+# Environment variables
+.env
+.env.local
