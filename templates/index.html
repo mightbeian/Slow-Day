@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slow Day - Network Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 2px solid #00ff00;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        .subtitle {
+            color: #00aa00;
+            margin-top: 10px;
+        }
+
+        .control-panel {
+            background: #111;
+            border: 1px solid #00ff00;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .input-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .input-field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            margin-bottom: 5px;
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        input {
+            background: #0a0a0a;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            border-radius: 3px;
+        }
+
+        input:focus {
+            outline: none;
+            box-shadow: 0 0 5px #00ff00;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #003300;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 12px 25px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            border-radius: 3px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #00ff00;
+            color: #000;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: #111;
+            border: 1px solid #00ff00;
+            padding: 15px;
+            text-align: center;
+            border-radius: 5px;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        .stat-label {
+            color: #00aa00;
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-active {
+            background: #00ff00;
+        }
+
+        .status-inactive {
+            background: #555;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .packet-table {
+            background: #111;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .table-header {
+            background: #003300;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            max-height: 500px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #003300;
+        }
+
+        th {
+            background: #002200;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tr:hover {
+            background: #001a00;
+        }
+
+        .protocol-tcp { color: #00ffff; }
+        .protocol-udp { color: #ffff00; }
+        .protocol-icmp { color: #ff00ff; }
+        .protocol-other { color: #ff8800; }
+
+        .no-data {
+            padding: 40px;
+            text-align: center;
+            color: #00aa00;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid;
+        }
+
+        .alert-success {
+            background: #003300;
+            border-color: #00ff00;
+            color: #00ff00;
+        }
+
+        .alert-error {
+            background: #330000;
+            border-color: #ff0000;
+            color: #ff0000;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+            border-top: 1px solid #00ff00;
+            color: #00aa00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SLOW DAY</h1>
+            <p class="subtitle">Network Traffic Analyzer</p>
+        </header>
+
+        <div id="alertContainer"></div>
+
+        <div class="control-panel">
+            <h2>Control Panel</h2>
+            <div class="input-group">
+                <div class="input-field">
+                    <label for="interface">Interface (optional)</label>
+                    <input type="text" id="interface" placeholder="e.g., eth0, wlan0">
+                </div>
+                <div class="input-field">
+                    <label for="filterIp">Filter IP</label>
+                    <input type="text" id="filterIp" placeholder="e.g., 192.168.1.1">
+                </div>
+                <div class="input-field">
+                    <label for="filterPort">Filter Port</label>
+                    <input type="number" id="filterPort" placeholder="e.g., 80, 443">
+                </div>
+                <div class="input-field">
+                    <label for="packetCount">Packet Limit (0 = unlimited)</label>
+                    <input type="number" id="packetCount" value="0" min="0">
+                </div>
+            </div>
+            <div class="button-group">
+                <button id="startBtn" onclick="startCapture()">▶ START CAPTURE</button>
+                <button id="stopBtn" onclick="stopCapture()" disabled>⏹ STOP CAPTURE</button>
+                <button onclick="refreshData()">🔄 REFRESH</button>
+                <button onclick="clearDatabase()">🗑 CLEAR DATA</button>
+                <button onclick="exportData()">💾 EXPORT JSON</button>
+            </div>
+        </div>
+
+        <div class="stats-panel">
+            <div class="stat-box">
+                <div class="stat-value" id="totalPackets">0</div>
+                <div class="stat-label">Total Packets</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value protocol-tcp" id="tcpCount">0</div>
+                <div class="stat-label">TCP</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value protocol-udp" id="udpCount">0</div>
+                <div class="stat-label">UDP</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value protocol-icmp" id="icmpCount">0</div>
+                <div class="stat-label">ICMP</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value protocol-other" id="otherCount">0</div>
+                <div class="stat-label">Other</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="totalBytes">0</div>
+                <div class="stat-label">Total Bytes</div>
+            </div>
+        </div>
+
+        <div class="packet-table">
+            <div class="table-header">
+                <h2>
+                    <span id="statusIndicator" class="status-indicator status-inactive"></span>
+                    Captured Packets
+                </h2>
+                <span id="liveCounter">0 packets</span>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Timestamp</th>
+                            <th>Source IP</th>
+                            <th>Source Port</th>
+                            <th>Destination IP</th>
+                            <th>Dest Port</th>
+                            <th>Protocol</th>
+                            <th>Length</th>
+                            <th>Flags</th>
+                        </tr>
+                    </thead>
+                    <tbody id="packetTableBody">
+                        <tr>
+                            <td colspan="9" class="no-data">No packets captured yet. Start capture to begin.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <footer>
+            <p>Slow Day Network Analyzer | For Educational & Security Research Purposes Only</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">⚠️ Use responsibly and only on networks you own or have permission to monitor</p>
+        </footer>
+    </div>
+
+    <script>
+        let updateInterval;
+        let isCapturing = false;
+
+        function showAlert(message, type = 'success') {
+            const alertContainer = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alertContainer.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        async function startCapture() {
+            const interface_name = document.getElementById('interface').value;
+            const filter_ip = document.getElementById('filterIp').value;
+            const filter_port = document.getElementById('filterPort').value;
+            const packet_count = parseInt(document.getElementById('packetCount').value);
+
+            const data = {
+                interface: interface_name || null,
+                filter_ip: filter_ip || null,
+                filter_port: filter_port ? parseInt(filter_port) : null,
+                packet_count: packet_count || 0
+            };
+
+            try {
+                const response = await fetch('/api/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('Capture started successfully!', 'success');
+                    isCapturing = true;
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                    document.getElementById('statusIndicator').className = 'status-indicator status-active';
+                    
+                    updateInterval = setInterval(refreshData, 2000);
+                } else {
+                    showAlert(result.error || 'Failed to start capture', 'error');
+                }
+            } catch (error) {
+                showAlert('Error starting capture: ' + error.message, 'error');
+            }
+        }
+
+        async function stopCapture() {
+            try {
+                const response = await fetch('/api/stop', {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('Capture stopped', 'success');
+                    isCapturing = false;
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('stopBtn').disabled = true;
+                    document.getElementById('statusIndicator').className = 'status-indicator status-inactive';
+                    
+                    clearInterval(updateInterval);
+                    refreshData();
+                } else {
+                    showAlert(result.error || 'Failed to stop capture', 'error');
+                }
+            } catch (error) {
+                showAlert('Error stopping capture: ' + error.message, 'error');
+            }
+        }
+
+        async function refreshData() {
+            await Promise.all([updatePackets(), updateStatistics()]);
+        }
+
+        async function updatePackets() {
+            try {
+                const response = await fetch('/api/packets?limit=100');
+                const data = await response.json();
+
+                const tbody = document.getElementById('packetTableBody');
+                
+                if (data.packets.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" class="no-data">No packets captured yet.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.packets.map(packet => `
+                    <tr>
+                        <td>${packet.id}</td>
+                        <td>${packet.timestamp}</td>
+                        <td>${packet.src_ip}</td>
+                        <td>${packet.src_port || '-'}</td>
+                        <td>${packet.dst_ip}</td>
+                        <td>${packet.dst_port || '-'}</td>
+                        <td class="protocol-${packet.protocol.toLowerCase()}">${packet.protocol}</td>
+                        <td>${packet.length}</td>
+                        <td>${packet.flags || '-'}</td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('liveCounter').textContent = `${data.count} packets`;
+            } catch (error) {
+                console.error('Error updating packets:', error);
+            }
+        }
+
+        async function updateStatistics() {
+            try {
+                const response = await fetch('/api/statistics');
+                const stats = await response.json();
+
+                document.getElementById('totalPackets').textContent = stats.total_packets || 0;
+                document.getElementById('tcpCount').textContent = stats.tcp_count || 0;
+                document.getElementById('udpCount').textContent = stats.udp_count || 0;
+                document.getElementById('icmpCount').textContent = stats.icmp_count || 0;
+                document.getElementById('otherCount').textContent = stats.other_count || 0;
+                document.getElementById('totalBytes').textContent = formatBytes(stats.total_bytes || 0);
+            } catch (error) {
+                console.error('Error updating statistics:', error);
+            }
+        }
+
+        async function clearDatabase() {
+            if (!confirm('Are you sure you want to clear all captured packets?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/clear', {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('Database cleared successfully', 'success');
+                    refreshData();
+                } else {
+                    showAlert(result.error || 'Failed to clear database', 'error');
+                }
+            } catch (error) {
+                showAlert('Error clearing database: ' + error.message, 'error');
+            }
+        }
+
+        async function exportData() {
+            try {
+                const response = await fetch('/api/export?limit=1000');
+                const data = await response.json();
+
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `slow-day-export-${Date.now()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showAlert('Data exported successfully', 'success');
+            } catch (error) {
+                showAlert('Error exporting data: ' + error.message, 'error');
+            }
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Initial load
+        refreshData();
+
+        // Check status periodically
+        setInterval(async () => {
+            try {
+                const response = await fetch('/api/status');
+                const status = await response.json();
+                
+                if (status.is_capturing !== isCapturing) {
+                    isCapturing = status.is_capturing;
+                    document.getElementById('startBtn').disabled = isCapturing;
+                    document.getElementById('stopBtn').disabled = !isCapturing;
+                    document.getElementById('statusIndicator').className = 
+                        `status-indicator ${isCapturing ? 'status-active' : 'status-inactive'}`;
+                }
+            } catch (error) {
+                console.error('Error checking status:', error);
+            }
+        }, 3000);
+    </script>
+</body>
+</html>
