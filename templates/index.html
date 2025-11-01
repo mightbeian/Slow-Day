@@ -431,7 +431,10 @@
         }
 
         async function refreshData() {
-            await Promise.all([updatePackets(), updateStatistics()]);
+            await Promise.all([
+                updatePackets(),
+                updateStatistics()
+            ]);
         }
 
         async function updatePackets() {
@@ -440,9 +443,10 @@
                 const data = await response.json();
 
                 const tbody = document.getElementById('packetTableBody');
-                
+                document.getElementById('liveCounter').textContent = `${data.count} packets`;
+
                 if (data.packets.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="9" class="no-data">No packets captured yet.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9" class="no-data">No packets captured yet. Start capture to begin.</td></tr>';
                     return;
                 }
 
@@ -459,8 +463,6 @@
                         <td>${packet.flags || '-'}</td>
                     </tr>
                 `).join('');
-
-                document.getElementById('liveCounter').textContent = `${data.count} packets`;
             } catch (error) {
                 console.error('Error updating packets:', error);
             }
@@ -476,7 +478,7 @@
                 document.getElementById('udpCount').textContent = stats.udp_count || 0;
                 document.getElementById('icmpCount').textContent = stats.icmp_count || 0;
                 document.getElementById('otherCount').textContent = stats.other_count || 0;
-                document.getElementById('totalBytes').textContent = formatBytes(stats.total_bytes || 0);
+                document.getElementById('totalBytes').textContent = (stats.total_bytes || 0).toLocaleString();
             } catch (error) {
                 console.error('Error updating statistics:', error);
             }
@@ -526,34 +528,15 @@
             }
         }
 
-        function formatBytes(bytes) {
-            if (bytes === 0) return '0 B';
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-
-        // Initial load
+        // Initial data load
         refreshData();
 
-        // Check status periodically
-        setInterval(async () => {
-            try {
-                const response = await fetch('/api/status');
-                const status = await response.json();
-                
-                if (status.is_capturing !== isCapturing) {
-                    isCapturing = status.is_capturing;
-                    document.getElementById('startBtn').disabled = isCapturing;
-                    document.getElementById('stopBtn').disabled = !isCapturing;
-                    document.getElementById('statusIndicator').className = 
-                        `status-indicator ${isCapturing ? 'status-active' : 'status-inactive'}`;
-                }
-            } catch (error) {
-                console.error('Error checking status:', error);
+        // Auto-refresh every 5 seconds when not capturing
+        setInterval(() => {
+            if (!isCapturing) {
+                refreshData();
             }
-        }, 3000);
+        }, 5000);
     </script>
 </body>
 </html>
